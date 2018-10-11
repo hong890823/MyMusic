@@ -1,12 +1,13 @@
 #include <jni.h>
 #include <string>
 #include "android/log.h"
+extern "C" {
 #include <libavformat/avformat.h>
+};
 
 #define LOGI(FORMAT,...) __android_log_print(ANDROID_LOG_INFO,"Hong",FORMAT,##__VA_ARGS__);
 
 extern "C" JNIEXPORT jstring
-
 JNICALL
 Java_com_hong_myplayer_Demo_stringFromJNI(
         JNIEnv *env,
