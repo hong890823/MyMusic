@@ -7,52 +7,61 @@ set(lib "${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}")
 set(path "src/main/cpp")
 
 #导入动态库
-add_library(avcodec-56 SHARED IMPORTED)
+add_library(avcodec-57 SHARED IMPORTED)
 #设置刚才导入动态库的实际地址链接
-set_target_properties(avcodec-56 PROPERTIES IMPORTED_LOCATION
-                             "${lib}/libavcodec-56.so")
+set_target_properties(avcodec-57 PROPERTIES IMPORTED_LOCATION
+                             "${lib}/libavcodec-57.so")
 
-add_library(avdevice-56 SHARED IMPORTED)
-set_target_properties(avdevice-56 PROPERTIES IMPORTED_LOCATION
-                             "${lib}/libavdevice-56.so")
+add_library(avdevice-57 SHARED IMPORTED)
+set_target_properties(avdevice-57 PROPERTIES IMPORTED_LOCATION
+                             "${lib}/libavdevice-57.so")
 
-add_library(avfilter-5 SHARED IMPORTED)
-set_target_properties(avfilter-5 PROPERTIES IMPORTED_LOCATION
-                        "${lib}/libavfilter-5.so")
+add_library(avfilter-6 SHARED IMPORTED)
+set_target_properties(avfilter-6 PROPERTIES IMPORTED_LOCATION
+                        "${lib}/libavfilter-6.so")
 
-add_library(avformat-56 SHARED IMPORTED)
-set_target_properties(avformat-56 PROPERTIES IMPORTED_LOCATION
-                       "${lib}/libavformat-56.so" )
+add_library(avformat-57 SHARED IMPORTED)
+set_target_properties(avformat-57 PROPERTIES IMPORTED_LOCATION
+                       "${lib}/libavformat-57.so" )
 
-add_library(avutil-54 SHARED IMPORTED)
-set_target_properties(avutil-54 PROPERTIES IMPORTED_LOCATION
-                        "${lib}/libavutil-54.so")
+add_library(avutil-55 SHARED IMPORTED)
+set_target_properties(avutil-55 PROPERTIES IMPORTED_LOCATION
+                        "${lib}/libavutil-55.so")
 
-add_library(postproc-53 SHARED IMPORTED)
-set_target_properties(postproc-53 PROPERTIES IMPORTED_LOCATION
-                        "${lib}/libpostproc-53.so")
+add_library(postproc-54 SHARED IMPORTED)
+set_target_properties(postproc-54 PROPERTIES IMPORTED_LOCATION
+                        "${lib}/libpostproc-54.so")
 
-add_library(swresample-1 SHARED IMPORTED)
-set_target_properties(swresample-1 PROPERTIES IMPORTED_LOCATION
-                       "${lib}/libswresample-1.so" )
+add_library(swresample-2 SHARED IMPORTED)
+set_target_properties(swresample-2 PROPERTIES IMPORTED_LOCATION
+                       "${lib}/libswresample-2.so" )
 
-add_library(swscale-3 SHARED IMPORTED)
-set_target_properties(swscale-3 PROPERTIES IMPORTED_LOCATION
-                        "${lib}/libswscale-3.so")
+add_library(swscale-4 SHARED IMPORTED)
+set_target_properties(swscale-4 PROPERTIES IMPORTED_LOCATION
+                        "${lib}/libswscale-4.so")
 
-add_library(native-lib SHARED src/main/cpp/native-lib.cpp)
+add_library(native-lib SHARED
+            src/main/cpp/native-lib.cpp
+            src/main/cpp/HCallJava.cpp
+            src/main/cpp/HFFmpeg.cpp
+            src/main/cpp/HAudio.cpp
+            src/main/cpp/HQueue.cpp
+            src/main/cpp/HPlayStatus.cpp
+            )
 
 target_link_libraries( # Specifies the target library.
                        native-lib
 
-                       avcodec-56
-                       avdevice-56
-                       avfilter-5
-                       avformat-56
-                       avutil-54
-                       postproc-53
-                       swresample-1
-                       swscale-3
+                       avcodec-57
+                       avdevice-57
+                       avfilter-6
+                       avformat-57
+                       avutil-55
+                       postproc-54
+                       swresample-2
+                       swscale-4
+
+                       OpenSLES
 
                        log )
 
