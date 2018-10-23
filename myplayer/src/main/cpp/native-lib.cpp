@@ -70,6 +70,10 @@ JNIEXPORT void JNICALL
 Java_com_hong_myplayer_player_HPlayer_n_1stop(JNIEnv *env, jobject instance) {
     if(!n_exit)return;
     n_exit = false;
+
+    jclass clz = env->GetObjectClass(instance);
+    jmethodID mid = env->GetMethodID(clz,"onCallNext","()V");
+
     if(FFmpeg != NULL){
         FFmpeg->release();
         delete(FFmpeg);
@@ -84,10 +88,47 @@ Java_com_hong_myplayer_player_HPlayer_n_1stop(JNIEnv *env, jobject instance) {
         }
     }
     n_exit = true;
+
+    env->CallVoidMethod(instance,mid);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_hong_myplayer_player_HPlayer_n_1seek(JNIEnv *env, jobject instance, jint seconds) {
     if(FFmpeg!=NULL)FFmpeg->seek(seconds);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1get_1duration(JNIEnv *env, jobject instance) {
+    int duration = 0;
+    if(FFmpeg!=NULL){
+        duration = FFmpeg->duration;
+    }
+    return duration;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1volume(JNIEnv *env, jobject instance,jint percent) {
+    if(FFmpeg!=NULL)FFmpeg->setVolume(percent);
+
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1mute(JNIEnv *env, jobject instance, jint mute) {
+    if(FFmpeg!=NULL)FFmpeg->setMute(mute);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1pitch(JNIEnv *env, jobject instance, jfloat pitch) {
+    if(FFmpeg!=NULL)FFmpeg->setPicth(pitch);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1speed(JNIEnv *env, jobject instance, jfloat speed) {
+    if(FFmpeg!=NULL)FFmpeg->setSpeed(speed);
 }

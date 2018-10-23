@@ -40,6 +40,10 @@ public:
     void resume();
     void release();
     void seek(int64_t seconds);
+    void setVolume(int percent);
+    void setMute(int mute);
+    void setPicth(float picth);
+    void setSpeed(float speed);
 };
 
 

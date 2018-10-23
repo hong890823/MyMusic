@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.4.1)
 
 #导入include文件夹路径
 include_directories(src/main/cpp/include)
+#导入SoundTouch所需源码文件
+include_directories(src/main/cpp/soundtouch/include)
+include_directories(src/main/cpp/soundtouch/source)
+
 
 set(lib "${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}")
 set(path "src/main/cpp")
@@ -47,6 +51,21 @@ add_library(native-lib SHARED
             src/main/cpp/HAudio.cpp
             src/main/cpp/HQueue.cpp
             src/main/cpp/HPlayStatus.cpp
+
+            src/main/cpp/soundtouch/source/AAfilter.cpp
+            src/main/cpp/soundtouch/source/cpu_detect_x86.cpp
+            src/main/cpp/soundtouch/source/FIFOSampleBuffer.cpp
+            src/main/cpp/soundtouch/source/FIRFilter.cpp
+            src/main/cpp/soundtouch/source/InterpolateCubic.cpp
+            src/main/cpp/soundtouch/source/InterpolateLinear.cpp
+            src/main/cpp/soundtouch/source/InterpolateShannon.cpp
+            src/main/cpp/soundtouch/source/PeakFinder.cpp
+            src/main/cpp/soundtouch/source/RateTransposer.cpp
+            src/main/cpp/soundtouch/source/SoundTouch.cpp
+            src/main/cpp/soundtouch/source/sse_optimized.cpp
+            src/main/cpp/soundtouch/source/TDStretch.cpp
+            src/main/cpp/soundtouch/source/BPMDetect.cpp
+            src/main/cpp/soundtouch/source/mmx_optimized.cpp
             )
 
 target_link_libraries( # Specifies the target library.

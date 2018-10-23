@@ -5,9 +5,15 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 import com.hong.myplayer.HTimeInfoBean;
 import com.hong.myplayer.listener.HonCompleteListener;
@@ -18,6 +24,9 @@ import com.hong.myplayer.listener.HonPreparedListener;
 import com.hong.myplayer.listener.HonTimeInfoListener;
 import com.hong.myplayer.log.LogUtil;
 import com.hong.myplayer.player.HPlayer;
+import com.hong.myplayer.util.HTimeUtil;
+
+import java.lang.ref.WeakReference;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, HonPreparedListener, HonLoadListener, HonPauseResumeListener, HonTimeInfoListener, HonErrorListener, HonCompleteListener {
     private HPlayer player;
@@ -29,12 +38,48 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Manifest.permission.INTERNET,
     };
 
+    static class ShowTimeHandler extends Handler{
+        WeakReference<MainActivity> reference;
+
+        ShowTimeHandler(MainActivity context){
+            this.reference = new WeakReference<>(context);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            MainActivity context = reference.get();
+            if(context!=null){
+                HTimeInfoBean timeInfoBean = (HTimeInfoBean) msg.obj;
+                int totalTime = timeInfoBean.getTotalTime();
+                int currentTime = timeInfoBean.getCurrentTime();
+                String timeStr = HTimeUtil.secdsToDateFormat(currentTime,totalTime)
+                        +"/"+HTimeUtil.secdsToDateFormat(totalTime,totalTime);
+                context.timeShowTv.setText(timeStr);
+
+                int progressTime = currentTime*100/totalTime;
+                context.playSeekBar.setProgress(progressTime);
+            }
+        }
+    }
+
+    private ShowTimeHandler showTimeHandler;
+    private TextView timeShowTv;
+    private SeekBar playSeekBar;
+    private int seekTime = 0;
+    private int muteSolo = 0;
+
+    private EditText pitchEdt;
+    private EditText speedEdt;
+    private Button changeSoundBtn;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         verifyStoragePermissions(this);
+        showTimeHandler = new ShowTimeHandler(this);
 
         player = new HPlayer();
         player.setSource("http://mpge.5nd.com/2015/2015-11-26/69708/1.mp3");
@@ -42,11 +87,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         player.setSource(path);
 //        player.setSource("http://ngcdn004.cnr.cn/live/dszs/index.m3u8");
 
-        findViewById(R.id.prepare_play).setOnClickListener(this);
         findViewById(R.id.start_play).setOnClickListener(this);
         findViewById(R.id.pause_play).setOnClickListener(this);
         findViewById(R.id.resume_play).setOnClickListener(this);
         findViewById(R.id.stop_play).setOnClickListener(this);
+        findViewById(R.id.next_play).setOnClickListener(this);
+        findViewById(R.id.switch_mute).setOnClickListener(this);
+        timeShowTv = findViewById(R.id.time_show);
+        playSeekBar = findViewById(R.id.seek_play);
+        playSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int duration = player.getDuration();
+                if(duration>0){
+                    seekTime = duration*progress/100;
+                }
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                player.seek(seekTime);
+            }
+        });
+        SeekBar volumeSeekBar = findViewById(R.id.seek_volume);
+        volumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                player.setVolume(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+        pitchEdt = findViewById(R.id.pitch_edt);
+        speedEdt = findViewById(R.id.speed_edt);
+        changeSoundBtn = findViewById(R.id.change_sound);
+        changeSoundBtn.setOnClickListener(this);
 
         player.setOnPreparedListener(this);
         player.setOnLoadListener(this);
@@ -73,15 +163,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
         switch (v.getId()){
-            case R.id.prepare_play:
+            case R.id.start_play:
                 player.prepare();
                 break;
-            case R.id.start_play:
-                player.start();
-                break;
             case R.id.pause_play:
-//                player.pause();
-                player.seek(145);
+                player.pause();
                 break;
             case R.id.resume_play:
                 player.resume();
@@ -90,6 +176,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // 还要处理数据流加载时的停止操作造成的异常
             case R.id.stop_play:
                 player.stop();
+                break;
+            case R.id.next_play:
+                player.playNext("http://ngcdn004.cnr.cn/live/dszs/index.m3u8");
+                break;
+            case R.id.switch_mute:
+                if(muteSolo==0)muteSolo=1;
+                else if(muteSolo==1)muteSolo=2;
+                else if(muteSolo==2)muteSolo=0;
+                player.setMuteSolo(muteSolo);
+                break;
+            case R.id.change_sound:
+                String pitchStr = pitchEdt.getText().toString();
+                String speedStr = speedEdt.getText().toString();
+                float pitch = 1;
+                float speed = 1;
+
+                try{
+                    pitch = Float.valueOf(pitchStr);
+                }catch(Exception e){
+                    pitch = 1;
+                }
+
+                try{
+                    speed = Float.valueOf(speedStr);
+                }catch(Exception e){
+                    speed = 1;
+                }
+                player.setPitchAndSpeed(pitch,speed);
                 break;
         }
     }
@@ -120,7 +234,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onTimeInfo(HTimeInfoBean timeInfoBean) {
-        LogUtil.logD(timeInfoBean.toString());
+        Message msg = showTimeHandler.obtainMessage();
+        msg.obj = timeInfoBean;
+        showTimeHandler.sendMessage(msg);
     }
 
     @Override

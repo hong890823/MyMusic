@@ -247,3 +247,19 @@ void HFFmpeg::seek(int64_t seconds) {
         }
     }
 }
+
+void HFFmpeg::setVolume(int percent) {
+    if(audio!=NULL)audio->setVolume(percent);
+}
+
+void HFFmpeg::setMute(int mute) {
+    if(audio!=NULL)audio->setMute(mute);
+}
+
+void HFFmpeg::setPicth(float pitch) {
+    if(audio!=NULL)audio->setPitch(pitch);
+}
+
+void HFFmpeg::setSpeed(float speed) {
+    if(audio!=NULL)audio->setSpeed(speed);
+}

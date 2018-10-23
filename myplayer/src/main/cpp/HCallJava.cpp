@@ -110,6 +110,7 @@ void HCallJava::onCallComplete(int type) {
             return;
         }
         jniEnv->CallVoidMethod(obj, jmid_complete);
+        //该方法不可以在主线程中调用
         jvm->DetachCurrentThread();
     }
 }

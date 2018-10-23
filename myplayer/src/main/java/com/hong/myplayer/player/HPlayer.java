@@ -25,9 +25,10 @@ public class HPlayer {
         System.loadLibrary("native-lib");
     }
 
+    private static String source;
     private static HTimeInfoBean timeInfoBean;//线程独享，防止混乱
+    private static boolean isNext;//是否播放下一曲
 
-    private String source;
     private HonPreparedListener onPreparedListener;
     private HonLoadListener onLoadListener;
     private HonPauseResumeListener onPauseResumeListener;
@@ -98,6 +99,7 @@ public class HPlayer {
     }
 
     public void stop(){
+        timeInfoBean = null;
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -108,6 +110,32 @@ public class HPlayer {
 
     public void seek(int seconds){
         n_seek(seconds);
+    }
+
+    public void playNext(String url){
+        isNext = true;
+        source = url;
+        stop();
+    }
+
+    public int getDuration(){
+        return n_get_duration();
+    }
+
+    public void setVolume(int percent){
+        if(percent>=0 && percent<=100)
+        n_volume(percent);
+    }
+
+    //改变声道
+    public void setMuteSolo(int mute){
+        n_mute(mute);
+    }
+
+    //改变音调音速
+    public void setPitchAndSpeed(float pitch,float speed){
+        n_pitch(pitch);
+        n_speed(speed);
     }
 
     //jni调用该方法表示解码器已经准备好了
@@ -134,7 +162,12 @@ public class HPlayer {
         stop();
         if(onCompleteListener!=null)onCompleteListener.onComplete();
     }
-
+    public void onCallNext(){
+        if(isNext){
+            isNext = false;
+            prepare();
+        }
+    }
 
     public native void n_prepare(String source);
     public native void n_start();
@@ -142,4 +175,9 @@ public class HPlayer {
     public native void n_resume();
     public native void n_stop();
     public native void n_seek(int seconds);
+    public native int n_get_duration();
+    public native void n_volume(int percent);
+    public native void n_mute(int mute);
+    public native void n_pitch(float pitch);
+    public native void n_speed(float speed);
 }

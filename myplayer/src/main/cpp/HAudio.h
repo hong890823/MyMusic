@@ -8,6 +8,8 @@
 #include "HQueue.h"
 #include "HPlayStatus.h"
 #include "HCallJava.h"
+#include "SoundTouch.h"
+using namespace soundtouch;
 
 extern "C"
 {
@@ -55,15 +57,29 @@ public:
     //pcm播放器
     SLObjectItf pcmPlayerObject = NULL;
     SLPlayItf pcmPlayerPlay = NULL;
+    SLVolumeItf pcmPlayerVolume = NULL;
+    SLMuteSoloItf  pcmPlayerMuteSolo = NULL;
 
     //缓冲器队列接口
     SLAndroidSimpleBufferQueueItf pcmBufferQueue = NULL;
+
+    //SoundTouch
+    float pitch = 1.0f;
+    float speed = 1.0f;
+
+    SoundTouch *soundTouch = NULL;
+    SAMPLETYPE *sampleBuffer = NULL;//16位 8位转成16位才能用SoundTouch变速变调
+    int nb = 0;
+    uint num = 0;
+    uint8_t *outBuffer = NULL;//8位
+    bool finished = true;
+
 public:
     HAudio( HPlayStatus *status,int sample_rate,HCallJava *callJava);
     ~HAudio();
 
     void play();
-    int resampleAudio();
+    int resampleAudio(uint8_t **outBuffer);
 
     void initOpenSLES();
 
@@ -73,6 +89,12 @@ public:
     void resume();
     void stop();
     void release();
+    void setVolume(int percent);
+    void setMute(int mute);
+
+    int getSoundTouchData();
+    void setPitch(float pitch);
+    void setSpeed(float speed);
 };
 
 

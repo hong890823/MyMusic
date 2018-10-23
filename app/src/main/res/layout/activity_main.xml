@@ -1,39 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/prepare_play"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="准备"/>
+        android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/start_play"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="开始"/>
+        <Button
+            android:id="@+id/start_play"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="开始"/>
 
-    <Button
-        android:id="@+id/pause_play"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="暂停"/>
+        <Button
+            android:id="@+id/pause_play"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="暂停"/>
 
-    <Button
-        android:id="@+id/resume_play"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="播放"/>
+        <Button
+            android:id="@+id/resume_play"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="播放"/>
 
-    <Button
-        android:id="@+id/stop_play"
+        <Button
+            android:id="@+id/stop_play"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="停止"/>
+
+        <Button
+            android:id="@+id/next_play"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="切换播放源"/>
+
+        <Button
+            android:id="@+id/switch_mute"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="切换声道"/>
+    </LinearLayout>
+
+    <!-- 进度控制 -->
+    <TextView
+        android:id="@+id/time_show"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <SeekBar
+        android:id="@+id/seek_play"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- 音量控制 -->
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="停止"/>
+        android:text="音量"
+        />
+    <SeekBar
+        android:id="@+id/seek_volume"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <EditText
+            android:id="@+id/pitch_edt"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="音调" />
+        <EditText
+            android:id="@+id/speed_edt"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="音速" />
+        <Button
+            android:id="@+id/change_sound"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="变调变速"
+            />
+    </LinearLayout>
 </LinearLayout>

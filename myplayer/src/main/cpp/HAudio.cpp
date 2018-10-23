@@ -9,7 +9,14 @@ HAudio::HAudio(HPlayStatus *status,int sample_rate,HCallJava *callJava) {
     this->sample_rate = sample_rate;
     this->callJava = callJava;
     this->queue = new HQueue(status);
-    this->buffer = (uint8_t *) av_malloc(44100 * 2 * 2);
+    this->buffer = (uint8_t *) av_malloc(static_cast<size_t>(sample_rate * 2 * 2));//demo中sample_rate的值也是44100
+
+    sampleBuffer = static_cast<SAMPLETYPE *>(malloc(static_cast<size_t>(sample_rate * 2 * 2)));
+    this->soundTouch = new SoundTouch();
+    soundTouch->setSampleRate(static_cast<uint>(sample_rate));
+    soundTouch->setChannels(2);
+    soundTouch->setPitch(pitch);//变调
+    soundTouch->setTempo(speed);//变速
 }
 
 HAudio::~HAudio() {
@@ -28,7 +35,7 @@ void HAudio::play() {
 
 //FILE *outFile = fopen("/storage/emulated/0/myheart.pcm","w");
 
-int HAudio::resampleAudio() {
+int HAudio::resampleAudio(uint8_t **outBuffer) {
     while(status!=NULL && !status->exit){
         if(queue->getQueueSize() == 0){//加载中
             if(!status->load) {
@@ -94,7 +101,7 @@ int HAudio::resampleAudio() {
                 continue;
             }
             //nb就是重采样后的采样率大小，实际数据存在了buffer中
-            int nb = swr_convert(
+            nb = swr_convert(
                     swr_ctx,
                     &buffer,//buffer定成1秒需要的内存空间就足够，真实的重采样根本不到1秒
                     avFrame->nb_samples,//输出采样个数（这里和输入的一样）
@@ -103,6 +110,7 @@ int HAudio::resampleAudio() {
             );
             int out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
             data_size = nb * out_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);//比如44100*2*2
+            *outBuffer = buffer;
 
             now_time = avFrame->pts * av_q2d(time_base);
             if(now_time < clock)
@@ -136,10 +144,46 @@ int HAudio::resampleAudio() {
     return data_size;
 }
 
+int HAudio::getSoundTouchData() {
+    while(status!=NULL && !status->exit){
+        outBuffer = NULL;
+        if(finished){
+            finished = false;
+            data_size = resampleAudio(&outBuffer);
+            if(data_size>0){
+                for(int i = 0; i < data_size / 2 + 1; i++){
+                    sampleBuffer[i] = (outBuffer[i * 2] | ((outBuffer[i * 2 + 1]) << 8));
+                }
+                soundTouch->putSamples(sampleBuffer, nb);
+                num = soundTouch->receiveSamples(sampleBuffer,data_size/4);
+            }else{
+                soundTouch->flush();
+            }
+        }
+
+        if(num==0){
+            finished = true;
+            continue;
+        }else{//没有再需要进行转化的数据，把sampleBuffer中剩余的数据拿出来
+            if(outBuffer==NULL){
+                num = soundTouch->receiveSamples(sampleBuffer,data_size/4);
+                if(num==0){
+                    finished = true;
+                    continue;
+                }
+            }
+            return num;
+        }
+
+    }
+    return 0;
+}
+
 void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
     HAudio *audio = static_cast<HAudio *>(context);
     if(audio != NULL){
-        int buffersize = audio->resampleAudio();
+//        int buffersize = audio->resampleAudio();
+        int buffersize = audio->getSoundTouchData();
         if(buffersize > 0){
             audio->clock += buffersize / ((double)(audio->sample_rate * 2 * 2));
             if(audio->clock - audio->last_tiem >= 1){//不需要频繁回调，这里面限定1秒回调1次
@@ -147,12 +191,8 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
                 audio->callJava->onCallTimeInfo(CHILD_THREAD, audio->clock, audio->duration); //回调应用层
             }
             //实际播放的方法
-            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize);
-
-            //如果这里不停止播放，即使歌曲播放完了，pcmBufferCallBack接口也会一直被调用
-//            if(audio->clock>audio->duration){
-//                audio->stop();
-//            }
+//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize);
+            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);
         }
     }
 }
@@ -194,16 +234,20 @@ void HAudio::initOpenSLES() {
     };
     SLDataSource slDataSource = {&android_queue, &pcm};
 
-
-    const SLInterfaceID ids[1] = {SL_IID_BUFFERQUEUE};
-    const SLboolean req[1] = {SL_BOOLEAN_TRUE};
-
-    (*engineEngine)->CreateAudioPlayer(engineEngine, &pcmPlayerObject, &slDataSource, &audioSnk, 1, ids, req);
+    //切记这里面一定要把相应的功能都加上
+    const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE,SL_IID_VOLUME,SL_IID_MUTESOLO};
+    const SLboolean req[3] = {SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE};
+   //切记功能数目变成相应数量
+    (*engineEngine)->CreateAudioPlayer(engineEngine, &pcmPlayerObject, &slDataSource, &audioSnk, 3, ids, req);
     //初始化播放器
     (*pcmPlayerObject)->Realize(pcmPlayerObject, SL_BOOLEAN_FALSE);
 
 //    得到接口后调用  获取Player接口
     (*pcmPlayerObject)->GetInterface(pcmPlayerObject, SL_IID_PLAY, &pcmPlayerPlay);
+    //初始化音量接口
+    (*pcmPlayerObject)->GetInterface(pcmPlayerObject,SL_IID_VOLUME,&pcmPlayerVolume);
+    //初始化声道接口
+    (*pcmPlayerObject)->GetInterface(pcmPlayerObject,SL_IID_MUTESOLO,&pcmPlayerMuteSolo);
 
 //    注册回调缓冲区 获取缓冲队列接口
     (*pcmPlayerObject)->GetInterface(pcmPlayerObject, SL_IID_BUFFERQUEUE, &pcmBufferQueue);
@@ -321,6 +365,71 @@ void HAudio::release() {
     if(callJava != NULL){
         callJava = NULL;
     }
+}
+
+void HAudio::setVolume(int percent) {
+    if(pcmPlayerVolume!=NULL){
+        //音量基本的分段算法（为了可以使音量更均衡的变化）
+        if(percent > 30){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -20));
+        }
+        else if(percent > 25){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -22));
+        }
+        else if(percent > 20){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -25));
+        }
+        else if(percent > 15){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -28));
+        }
+        else if(percent > 10){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -30));
+        }
+        else if(percent > 5){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -34));
+        }
+        else if(percent > 3){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -37));
+        }
+        else if(percent > 0){
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -40));
+        }
+        else{
+            (*pcmPlayerVolume)->SetVolumeLevel(pcmPlayerVolume,static_cast<SLmillibel>((100 - percent) * -100));
+        }
+    }
+
+}
+
+/**
+ * 右声道为0，左声道为1.（在戴耳机的时候感受最为明显）
+ * */
+void HAudio::setMute(int mute) {
+    if(pcmPlayerMuteSolo!=NULL){
+        if(0==mute){//右声道
+            (*pcmPlayerMuteSolo)->SetChannelMute(pcmPlayerMuteSolo,0,SL_BOOLEAN_TRUE);
+            (*pcmPlayerMuteSolo)->SetChannelMute(pcmPlayerMuteSolo,1,SL_BOOLEAN_FALSE);
+        }
+        else if(1==mute){//左声道
+            (*pcmPlayerMuteSolo)->SetChannelMute(pcmPlayerMuteSolo,0,SL_BOOLEAN_FALSE);
+            (*pcmPlayerMuteSolo)->SetChannelMute(pcmPlayerMuteSolo,1,SL_BOOLEAN_TRUE);
+        }
+        else if(2==mute){//立体声
+            (*pcmPlayerMuteSolo)->SetChannelMute(pcmPlayerMuteSolo,0,SL_BOOLEAN_FALSE);
+            (*pcmPlayerMuteSolo)->SetChannelMute(pcmPlayerMuteSolo,1,SL_BOOLEAN_FALSE);
+        }
+        LOGD("当前声道是%i",mute);
+    }
+}
+
+void HAudio::setPitch(float pitch) {
+    this->pitch = pitch;
+    if(soundTouch!=NULL)soundTouch->setPitch(pitch);//变调
+}
+
+void HAudio::setSpeed(float speed) {
+    this->speed = speed;
+    if(soundTouch!=NULL)soundTouch->setTempo(speed);//变速
 }
 
 
