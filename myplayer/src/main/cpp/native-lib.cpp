@@ -132,3 +132,17 @@ JNIEXPORT void JNICALL
 Java_com_hong_myplayer_player_HPlayer_n_1speed(JNIEnv *env, jobject instance, jfloat speed) {
     if(FFmpeg!=NULL)FFmpeg->setSpeed(speed);
 }
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1sample_1rate(JNIEnv *env, jobject instance) {
+    if(FFmpeg!=NULL)return FFmpeg->getSampleRate();
+    return 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1start_1stop_1record(JNIEnv *env, jobject instance,
+                                                             jboolean isStartRecord) {
+    if(FFmpeg!=NULL) FFmpeg->startOrStopRecord(isStartRecord);
+}

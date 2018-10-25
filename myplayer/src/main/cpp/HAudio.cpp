@@ -192,6 +192,12 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
             }
             //实际播放的方法
 //            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize);
+
+            if(audio->isStartRecord)audio->callJava->onCallPcmToAac(CHILD_THREAD,buffersize*2*2,audio->sampleBuffer);
+
+            int db = audio->getPCMDB(reinterpret_cast<char *>(audio->sampleBuffer), buffersize * 4);
+//            LOGD("分贝值是%i",db);
+
             (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);
         }
     }
@@ -235,10 +241,10 @@ void HAudio::initOpenSLES() {
     SLDataSource slDataSource = {&android_queue, &pcm};
 
     //切记这里面一定要把相应的功能都加上
-    const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE,SL_IID_VOLUME,SL_IID_MUTESOLO};
-    const SLboolean req[3] = {SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE};
+    const SLInterfaceID ids[4] = {SL_IID_BUFFERQUEUE,SL_IID_VOLUME,SL_IID_PLAYBACKRATE,SL_IID_MUTESOLO};
+    const SLboolean req[4] = {SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE,SL_BOOLEAN_TRUE};
    //切记功能数目变成相应数量
-    (*engineEngine)->CreateAudioPlayer(engineEngine, &pcmPlayerObject, &slDataSource, &audioSnk, 3, ids, req);
+    (*engineEngine)->CreateAudioPlayer(engineEngine, &pcmPlayerObject, &slDataSource, &audioSnk, 4, ids, req);
     //初始化播放器
     (*pcmPlayerObject)->Realize(pcmPlayerObject, SL_BOOLEAN_FALSE);
 
@@ -430,6 +436,27 @@ void HAudio::setPitch(float pitch) {
 void HAudio::setSpeed(float speed) {
     this->speed = speed;
     if(soundTouch!=NULL)soundTouch->setTempo(speed);//变速
+}
+
+//计算分贝值(可能不太准...)
+int HAudio::getPCMDB(char *pcmcata, size_t pcmsize) {
+    int db = 0;
+    short int pervalue = 0;
+    double sum = 0;
+    for(int i = 0; i < pcmsize; i+= 2){
+        memcpy(&pervalue, pcmcata+i, 2);
+        sum += abs(pervalue);
+    }
+    sum = sum / (pcmsize / 2);
+    if(sum > 0)
+    {
+        db = (int)20.0 *log10(sum);//计算振幅的方法
+    }
+    return db;
+}
+
+void HAudio::startOrStopRecord(bool isStartRecord) {
+    this->isStartRecord = isStartRecord;
 }
 
 

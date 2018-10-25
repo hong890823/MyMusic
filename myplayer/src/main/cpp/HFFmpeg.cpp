@@ -263,3 +263,12 @@ void HFFmpeg::setPicth(float pitch) {
 void HFFmpeg::setSpeed(float speed) {
     if(audio!=NULL)audio->setSpeed(speed);
 }
+
+int HFFmpeg::getSampleRate() {
+    if(audio!=NULL)return audio->deCodecCtx->sample_rate;
+    return 0;
+}
+
+void HFFmpeg::startOrStopRecord(bool isStartRecord) {
+    if(audio!=NULL)audio->startOrStopRecord(isStartRecord);
+}

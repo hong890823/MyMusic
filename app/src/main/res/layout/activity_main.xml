@@ -41,24 +41,24 @@
 
         <Button
             android:id="@+id/next_play"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="切换播放源"/>
 
         <Button
             android:id="@+id/switch_mute"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="切换声道"/>
+
     </LinearLayout>
 
     <!-- 进度控制 -->
     <TextView
         android:id="@+id/time_show"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:text="0.00/0.00" />
     <SeekBar
         android:id="@+id/seek_play"
         android:layout_width="match_parent"
@@ -98,4 +98,31 @@
             android:text="变调变速"
             />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/record_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"/>
+
+    <Button
+        android:id="@+id/start_record"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="开始录音" />
+    <Button
+        android:id="@+id/pause_record"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="暂停录音" />
+    <Button
+        android:id="@+id/resume_record"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="继续录音" />
+    <Button
+        android:id="@+id/stop_record"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="停止录音" />
 </LinearLayout>

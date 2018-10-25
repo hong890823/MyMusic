@@ -22,6 +22,7 @@ public:
     jmethodID jmid_timeinfo;
     jmethodID jmid_error;
     jmethodID jmid_complete;
+    jmethodID jmid_pcm2aac;
 public:
     HCallJava(JavaVM *vm,JNIEnv *env,jobject obj);
     ~HCallJava();
@@ -31,6 +32,7 @@ public:
     void onCallTimeInfo(int type,int clock,int duration);
     void onCallError(int type,int code,char *msg);
     void onCallComplete(int type);
+    void onCallPcmToAac(int type,int size,void *buffer);
 };
 
 

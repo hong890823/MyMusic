@@ -74,6 +74,8 @@ public:
     uint8_t *outBuffer = NULL;//8位
     bool finished = true;
 
+    //是否边播边录
+    bool isStartRecord = false;
 public:
     HAudio( HPlayStatus *status,int sample_rate,HCallJava *callJava);
     ~HAudio();
@@ -95,6 +97,8 @@ public:
     int getSoundTouchData();
     void setPitch(float pitch);
     void setSpeed(float speed);
+    int getPCMDB(char *pcmcata, size_t pcmsize);
+    void startOrStopRecord(bool isStartRecord);
 };
 
 

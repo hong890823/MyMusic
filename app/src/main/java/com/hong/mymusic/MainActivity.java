@@ -21,14 +21,16 @@ import com.hong.myplayer.listener.HonErrorListener;
 import com.hong.myplayer.listener.HonLoadListener;
 import com.hong.myplayer.listener.HonPauseResumeListener;
 import com.hong.myplayer.listener.HonPreparedListener;
+import com.hong.myplayer.listener.HonRecordListener;
 import com.hong.myplayer.listener.HonTimeInfoListener;
 import com.hong.myplayer.log.LogUtil;
 import com.hong.myplayer.player.HPlayer;
 import com.hong.myplayer.util.HTimeUtil;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, HonPreparedListener, HonLoadListener, HonPauseResumeListener, HonTimeInfoListener, HonErrorListener, HonCompleteListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, HonPreparedListener, HonLoadListener, HonPauseResumeListener, HonTimeInfoListener, HonErrorListener, HonCompleteListener, HonRecordListener {
     private HPlayer player;
 
     private static final int REQUEST_EXTERNAL=1;
@@ -50,16 +52,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             super.handleMessage(msg);
             MainActivity context = reference.get();
             if(context!=null){
-                HTimeInfoBean timeInfoBean = (HTimeInfoBean) msg.obj;
-                int totalTime = timeInfoBean.getTotalTime();
-                int currentTime = timeInfoBean.getCurrentTime();
-                String timeStr = HTimeUtil.secdsToDateFormat(currentTime,totalTime)
-                        +"/"+HTimeUtil.secdsToDateFormat(totalTime,totalTime);
-                context.timeShowTv.setText(timeStr);
 
-                int progressTime = currentTime*100/totalTime;
-                context.playSeekBar.setProgress(progressTime);
+                if(msg.what==-1){
+                    HTimeInfoBean timeInfoBean = (HTimeInfoBean) msg.obj;
+                    int totalTime = timeInfoBean.getTotalTime();
+                    int currentTime = timeInfoBean.getCurrentTime();
+                    String timeStr = HTimeUtil.secdsToDateFormat(currentTime,totalTime)
+                            +"/"+HTimeUtil.secdsToDateFormat(totalTime,totalTime);
+                    context.timeShowTv.setText(timeStr);
+
+                    int progressTime = currentTime*100/totalTime;
+                    context.playSeekBar.setProgress(progressTime);
+                }else if(msg.what == -2){
+                    int seconds = (int) msg.obj;
+                    context.recordTimeTv.setText(String.valueOf(seconds));
+                }
+
             }
+
         }
     }
 
@@ -67,11 +77,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView timeShowTv;
     private SeekBar playSeekBar;
     private int seekTime = 0;
+
     private int muteSolo = 0;
 
     private EditText pitchEdt;
     private EditText speedEdt;
     private Button changeSoundBtn;
+
+    private TextView recordTimeTv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -138,12 +151,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         changeSoundBtn = findViewById(R.id.change_sound);
         changeSoundBtn.setOnClickListener(this);
 
+        findViewById(R.id.start_record).setOnClickListener(this);
+        findViewById(R.id.pause_record).setOnClickListener(this);
+        findViewById(R.id.resume_record).setOnClickListener(this);
+        findViewById(R.id.stop_record).setOnClickListener(this);
+        recordTimeTv = findViewById(R.id.record_time);
+
         player.setOnPreparedListener(this);
         player.setOnLoadListener(this);
         player.setOnPauseResumeListener(this);
         player.setOnTimeInfoListener(this);
         player.setOnErrorListener(this);
         player.setOnCompleteListener(this);
+        player.setOnRecordListener(this);
+
     }
 
     /**
@@ -191,19 +212,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 String speedStr = speedEdt.getText().toString();
                 float pitch = 1;
                 float speed = 1;
-
                 try{
                     pitch = Float.valueOf(pitchStr);
                 }catch(Exception e){
                     pitch = 1;
                 }
-
                 try{
                     speed = Float.valueOf(speedStr);
                 }catch(Exception e){
                     speed = 1;
                 }
                 player.setPitchAndSpeed(pitch,speed);
+                break;
+            case R.id.start_record:
+                String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+                player.startRecord(new File(rootPath+"/myheart.aac"));
+                break;
+            case R.id.pause_record:
+                player.pauseRecord();
+                break;
+            case R.id.resume_record:
+                player.resumeRecord();
+                break;
+            case R.id.stop_record:
+                player.stopRecord();
                 break;
         }
     }
@@ -235,6 +267,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onTimeInfo(HTimeInfoBean timeInfoBean) {
         Message msg = showTimeHandler.obtainMessage();
+        msg.what = -1;
         msg.obj = timeInfoBean;
         showTimeHandler.sendMessage(msg);
     }
@@ -248,6 +281,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onComplete() {
         LogUtil.logD("播放完成");
+    }
+
+    @Override
+    public void onRecordTime(int seconds) {
+        Message msg = showTimeHandler.obtainMessage();
+        msg.what = -2;
+        msg.obj = seconds;
+        showTimeHandler.sendMessage(msg);
     }
 
 }

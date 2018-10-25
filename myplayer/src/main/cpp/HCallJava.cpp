@@ -21,6 +21,7 @@ HCallJava::HCallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
     this->jmid_timeinfo = this->env->GetMethodID(clz,"onCallTimeInfo","(II)V");
     this->jmid_error = this->env->GetMethodID(clz,"onCallError","(ILjava/lang/String;)V");
     this->jmid_complete = this->env->GetMethodID(clz,"onCallComplete","()V");
+    this->jmid_pcm2aac = this->env->GetMethodID(clz,"encodecPcmToAac","(I[B)V");
 
 }
 
@@ -111,6 +112,29 @@ void HCallJava::onCallComplete(int type) {
         }
         jniEnv->CallVoidMethod(obj, jmid_complete);
         //该方法不可以在主线程中调用
+        jvm->DetachCurrentThread();
+    }
+}
+
+void HCallJava::onCallPcmToAac(int type, int size, void *buffer) {
+    if(type == MAIN_THREAD){
+        jbyteArray array = env->NewByteArray(size);
+        env->SetByteArrayRegion(array, 0, size, static_cast<const jbyte *>(buffer));
+        env->CallVoidMethod(obj, jmid_pcm2aac,size,array);
+        env->DeleteLocalRef(array);
+    }
+    else if(type == CHILD_THREAD){
+        JNIEnv *jniEnv;
+        if(jvm->AttachCurrentThread(&jniEnv, 0) != JNI_OK){
+            if(LOG_DEBUG){
+                LOGE("call onCallPcmToAcc worng");
+            }
+            return;
+        }
+        jbyteArray array = jniEnv->NewByteArray(size);
+        jniEnv->SetByteArrayRegion(array, 0, size, static_cast<const jbyte *>(buffer));
+        jniEnv->CallVoidMethod(obj, jmid_pcm2aac,size,array);
+        jniEnv->DeleteLocalRef(array);
         jvm->DetachCurrentThread();
     }
 }

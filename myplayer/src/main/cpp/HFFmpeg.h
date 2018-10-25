@@ -44,6 +44,8 @@ public:
     void setMute(int mute);
     void setPicth(float picth);
     void setSpeed(float speed);
+    int getSampleRate();
+    void startOrStopRecord(bool isStartRecord);
 };
 
 
