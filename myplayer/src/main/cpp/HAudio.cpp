@@ -36,12 +36,19 @@ void HAudio::play() {
 //FILE *outFile = fopen("/storage/emulated/0/myheart.pcm","w");
 
 int HAudio::resampleAudio(uint8_t **outBuffer) {
+    data_size = 0;
     while(status!=NULL && !status->exit){
+        if(status->seek){
+            av_usleep(1000*100);
+            continue;
+        }
+
         if(queue->getQueueSize() == 0){//加载中
             if(!status->load) {
                 status->load = true;
                 callJava->onCallLoad(CHILD_THREAD, true);
             }
+            av_usleep(1000*100);
             continue;
         } else{
             if(status->load){
@@ -343,6 +350,8 @@ void HAudio::release() {
         pcmPlayerObject = NULL;
         pcmPlayerPlay = NULL;
         pcmBufferQueue = NULL;
+        pcmPlayerVolume = NULL;
+        pcmPlayerMuteSolo = NULL;
     }
     if(outputMixObject != NULL){
         (*outputMixObject)->Destroy(outputMixObject);
@@ -358,6 +367,19 @@ void HAudio::release() {
         //真正的释放占用的内存
         free(buffer);
         buffer = NULL;
+    }
+    if(outBuffer != NULL){
+        //这里面不用free掉outBuffer的内存
+        //因为outBuffer我们就没有申请内存，它和buffer用的是一块内存
+        outBuffer = NULL;
+    }
+    if(soundTouch!=NULL){
+        delete(soundTouch);
+        soundTouch = NULL;
+    }
+    if(sampleBuffer!=NULL){
+        free(sampleBuffer);
+        sampleBuffer=NULL;
     }
     if(deCodecCtx != NULL){
         avcodec_close(deCodecCtx);

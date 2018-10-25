@@ -125,8 +125,16 @@ void HFFmpeg::start() {
 
     int count = 0;
     while(status!=NULL && !status->exit){
-        if(status->seek)continue;
-        if(audio->queue->getQueueSize()>40)continue;//不要一次性全部读帧。这样控制一下既可以减少内存压力，又可以防止seek出错。
+        if(status->seek){
+            //在适当的continue的地方进行睡眠可以非常有效的降低cpu的使用率
+            //经过测试可以降低一半的cpu使用率
+            av_usleep(1000*100);
+            continue;
+        }
+        if(audio->queue->getQueueSize()>100){//不要一次性全部读帧。这样控制一下既可以减少内存压力，又可以防止seek出错。
+            av_usleep(1000*100);
+            continue;
+        }
 
         AVPacket *avPacket = av_packet_alloc();//此时avPacket是一个空包
         pthread_mutex_lock(&seek_mutex);//尽量减小锁的粒度
@@ -149,8 +157,9 @@ void HFFmpeg::start() {
             av_free(avPacket);
             avPacket = NULL;
 
-            while(status!=NULL && !status->exit){
+            while(status!=NULL && !status->exit){//文件读取完毕，但是缓存队列里面还有的时候会进入该循环
                 if(audio->queue->getQueueSize()>0){
+                    av_usleep(1000*100);
                     continue;
                 }else{
                     status->exit = true;
