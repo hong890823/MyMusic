@@ -273,8 +273,8 @@ public class HPlayer {
             encoderFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC,sampleRate,2);
             encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE, 96000);
             encoderFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-            //这个大小决定MediaCodec中ByteBuffer的大小，过小可能导致byteBuffer.put方法崩溃
-            encoderFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 1024*100);
+            //这个大小决定MediaCodec中ByteBuffer的大小，如果小于pcm数据包的大小会导致byteBuffer.put方法崩溃。所以需要进行c++层pcm的分包。
+            encoderFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 4096);
             encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
             codecBufferInfo = new MediaCodec.BufferInfo();
             if(encoder==null)LogUtil.logE("HPlayer.initMediaCodec encoder is null");

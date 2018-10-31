@@ -51,6 +51,8 @@ add_library(native-lib SHARED
             src/main/cpp/HAudio.cpp
             src/main/cpp/HQueue.cpp
             src/main/cpp/HPlayStatus.cpp
+            src/main/cpp/HPcmBean.cpp
+            src/main/cpp/HBufferQueue.cpp
 
             src/main/cpp/soundtouch/source/AAfilter.cpp
             src/main/cpp/soundtouch/source/cpu_detect_x86.cpp

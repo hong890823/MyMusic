@@ -9,6 +9,8 @@
 #include "HPlayStatus.h"
 #include "HCallJava.h"
 #include "SoundTouch.h"
+#include "HBufferQueue.h"
+
 using namespace soundtouch;
 
 extern "C"
@@ -84,6 +86,12 @@ public:
     bool isCut = false;
     int endTime = 0;
     bool isReturnPcm = false;
+
+    //单开线程Pcm数据分包
+    pthread_t pcmCallBackThread;
+    HBufferQueue *bufferQueue = NULL;
+    int defaultPcmSize = 4096;
+
 public:
     HAudio( HPlayStatus *status,int sample_rate,HCallJava *callJava);
     ~HAudio();

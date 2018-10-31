@@ -33,8 +33,57 @@ void *decodePlay(void *data){
     pthread_exit(&audio->thread_play);
 }
 
+void *pcmCallBack(void *data){
+    HAudio *audio = static_cast<HAudio *>(data);
+    while(audio->status!=NULL && !audio->status->exit){
+        HPcmBean *pcmBean = NULL;
+        audio->bufferQueue->getBuffer(&pcmBean);
+        if(pcmBean==NULL)continue;
+        if(pcmBean->buffsize<=audio->defaultPcmSize){//不需要分包
+            if(audio->isStartRecord){
+                audio->callJava->onCallPcmToAac(CHILD_THREAD, pcmBean->buffsize, pcmBean->buffer);
+            }
+            if(audio->isReturnPcm){
+                audio->callJava->onCallPcmInfo(pcmBean->buffer, pcmBean->buffsize);
+            }
+        }else{
+            int pack_num = pcmBean->buffsize / audio->defaultPcmSize;
+            int pack_sub = pcmBean->buffsize % audio->defaultPcmSize;
+
+            for(int i = 0; i < pack_num; i++) {
+                char *bf = static_cast<char *>(malloc(audio->defaultPcmSize));
+                //参数二：起始地址+偏移量
+                memcpy(bf, pcmBean->buffer + i * audio->defaultPcmSize, audio->defaultPcmSize);
+                if(audio->isStartRecord) {
+                    audio->callJava->onCallPcmToAac(CHILD_THREAD, audio->defaultPcmSize, bf);
+                }
+                if(audio->isReturnPcm){
+                    audio->callJava->onCallPcmInfo(bf, audio->defaultPcmSize);
+                }
+                free(bf);
+            }
+
+            if(pack_sub > 0){
+                char *bf = static_cast<char *>(malloc(pack_sub));
+                memcpy(bf, pcmBean->buffer + pack_num * audio->defaultPcmSize, pack_sub);
+                if(audio->isStartRecord) {
+                    audio->callJava->onCallPcmToAac(CHILD_THREAD, pack_sub, bf);
+                }
+                if(audio->isReturnPcm){
+                    audio->callJava->onCallPcmInfo(bf, pack_sub);
+                }
+            }
+        }
+        delete(pcmBean);
+        pcmBean = NULL;
+    }
+    pthread_exit(&audio->pcmCallBackThread);
+}
+
 void HAudio::play() {
+    bufferQueue = new HBufferQueue(status);
     pthread_create(&thread_play,NULL,decodePlay,this);
+    pthread_create(&pcmCallBackThread,NULL,pcmCallBack,this);
 }
 
 //FILE *outFile = fopen("/storage/emulated/0/myheart.pcm","w");
@@ -207,22 +256,22 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
                 audio->last_tiem = audio->clock;
                 audio->callJava->onCallTimeInfo(CHILD_THREAD, audio->clock, audio->duration); //回调应用层
             }
-            //实际播放的方法
-//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize);
-
-            if(audio->isStartRecord)audio->callJava->onCallPcmToAac(CHILD_THREAD,buffersize*2*2,audio->sampleBuffer);
+//            if(audio->isStartRecord)audio->callJava->onCallPcmToAac(CHILD_THREAD,buffersize*2*2,audio->sampleBuffer);
+            audio->bufferQueue->putBuffer(audio->sampleBuffer, buffersize * 4);//pcm数据分包，防止应用层录音崩溃
 
             int db = audio->getPCMDB(reinterpret_cast<char *>(audio->sampleBuffer), buffersize * 4);
 //            LOGD("分贝值是%i",db);
 
+            //实际播放的方法
+//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize);
             (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);
 
             //如果需要裁剪音频的话
             //更独立的裁剪可以放到一个单独的线程去仿照这个逻辑做，速度会快一些。
             if(audio->isCut){
-                if(audio->isReturnPcm){
-                    audio->callJava->onCallPcmInfo(audio->sampleBuffer, buffersize * 2 * 2);
-                }
+//                if(audio->isReturnPcm){
+//                    audio->callJava->onCallPcmInfo(audio->sampleBuffer, buffersize * 2 * 2);
+//                }
                 if(audio->clock > audio->endTime){
                     LOGE("裁剪退出...");
                     audio->status->exit = true;
@@ -363,6 +412,15 @@ void HAudio::stop() {
 
 void HAudio::release() {
     stop();
+    if(bufferQueue != NULL)
+    {
+        bufferQueue->noticeThread();
+        pthread_join(pcmCallBackThread, NULL);
+        bufferQueue->release();
+        delete(bufferQueue);
+        bufferQueue = NULL;
+    }
+
     if(queue!=NULL){
         //delete方法会触发HQueue对象的析构方法
         delete(queue);
