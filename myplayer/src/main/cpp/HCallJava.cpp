@@ -22,7 +22,8 @@ HCallJava::HCallJava(JavaVM *vm, JNIEnv *env, jobject obj) {
     this->jmid_error = this->env->GetMethodID(clz,"onCallError","(ILjava/lang/String;)V");
     this->jmid_complete = this->env->GetMethodID(clz,"onCallComplete","()V");
     this->jmid_pcm2aac = this->env->GetMethodID(clz,"encodecPcmToAac","(I[B)V");
-
+    this->jmid_pcminfo = this->env->GetMethodID(clz,"onCallPcmInfo","([BI)V");
+    this->jmid_pcmrate = this->env->GetMethodID(clz,"onCallPcmRate","(I)V");
 }
 
 HCallJava::~HCallJava() {
@@ -67,7 +68,7 @@ void HCallJava::onCallTimeInfo(int type, int clock, int total) {
         JNIEnv *jniEnv;
         if(jvm->AttachCurrentThread(&jniEnv, 0) != JNI_OK){
             if(LOG_DEBUG){
-                LOGE("call onCallTimeInfo worng");
+                LOGE("call onCallTimeInfo wrong");
             }
             return;
         }
@@ -87,7 +88,7 @@ void HCallJava::onCallError(int type, int code, char *msg) {
         JNIEnv *jniEnv;
         if(jvm->AttachCurrentThread(&jniEnv, 0) != JNI_OK){
             if(LOG_DEBUG){
-                LOGE("call onCallError worng");
+                LOGE("call onCallError wrong");
             }
             return;
         }
@@ -106,7 +107,7 @@ void HCallJava::onCallComplete(int type) {
         JNIEnv *jniEnv;
         if(jvm->AttachCurrentThread(&jniEnv, 0) != JNI_OK){
             if(LOG_DEBUG){
-                LOGE("call onCallComplete worng");
+                LOGE("call onCallComplete wrong");
             }
             return;
         }
@@ -127,7 +128,7 @@ void HCallJava::onCallPcmToAac(int type, int size, void *buffer) {
         JNIEnv *jniEnv;
         if(jvm->AttachCurrentThread(&jniEnv, 0) != JNI_OK){
             if(LOG_DEBUG){
-                LOGE("call onCallPcmToAcc worng");
+                LOGE("call onCallPcmToAcc wrong");
             }
             return;
         }
@@ -137,4 +138,27 @@ void HCallJava::onCallPcmToAac(int type, int size, void *buffer) {
         jniEnv->DeleteLocalRef(array);
         jvm->DetachCurrentThread();
     }
+}
+
+void HCallJava::onCallPcmInfo(void *buffer, int size) {
+    JNIEnv *jniEnv;
+    if(jvm->AttachCurrentThread(&jniEnv,0)!=JNI_OK){
+        if(LOG_DEBUG)LOGE("call onCallPcmInfo wrong");
+        return;
+    }
+    jbyteArray array = jniEnv->NewByteArray(size);
+    jniEnv->SetByteArrayRegion(array, 0, size, static_cast<const jbyte *>(buffer));
+    jniEnv->CallVoidMethod(obj,jmid_pcminfo,array,size);
+    jniEnv->DeleteLocalRef(array);
+    jvm->DetachCurrentThread();
+}
+
+void HCallJava::onCallPcmRate(int sampleRate) {
+    JNIEnv *jniEnv;
+    if(jvm->AttachCurrentThread(&jniEnv, 0) != JNI_OK){
+        if(LOG_DEBUG)LOGE("call onCallPcmRate worng");
+        return;
+    }
+    jniEnv->CallVoidMethod(obj, jmid_pcmrate, sampleRate);
+    jvm->DetachCurrentThread();
 }

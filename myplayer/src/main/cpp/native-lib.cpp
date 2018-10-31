@@ -146,3 +146,13 @@ Java_com_hong_myplayer_player_HPlayer_n_1start_1stop_1record(JNIEnv *env, jobjec
                                                              jboolean isStartRecord) {
     if(FFmpeg!=NULL) FFmpeg->startOrStopRecord(isStartRecord);
 }
+
+//剪切播放的音频并决定是否返回pcm数据
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_hong_myplayer_player_HPlayer_n_1cut_1audio_1play(JNIEnv *env, jobject instance, jint startTime,
+                                                    jint endTime, jboolean isReturnPcm) {
+    if(FFmpeg!=NULL)return static_cast<jboolean>(FFmpeg->cutAudioPlay(startTime, endTime, isReturnPcm));
+
+    return static_cast<jboolean>(false);
+}

@@ -46,6 +46,7 @@ public:
     void setSpeed(float speed);
     int getSampleRate();
     void startOrStopRecord(bool isStartRecord);
+    bool cutAudioPlay(int startTime,int endTime,bool isReturnPcm);
 };
 
 

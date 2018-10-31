@@ -23,6 +23,8 @@ public:
     jmethodID jmid_error;
     jmethodID jmid_complete;
     jmethodID jmid_pcm2aac;
+    jmethodID jmid_pcminfo;
+    jmethodID jmid_pcmrate;
 public:
     HCallJava(JavaVM *vm,JNIEnv *env,jobject obj);
     ~HCallJava();
@@ -33,6 +35,8 @@ public:
     void onCallError(int type,int code,char *msg);
     void onCallComplete(int type);
     void onCallPcmToAac(int type,int size,void *buffer);
+    void onCallPcmInfo(void *buffer, int size);
+    void onCallPcmRate(int samplerate);
 };
 
 

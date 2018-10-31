@@ -77,6 +77,13 @@ public:
 
     //是否边播边录
     bool isStartRecord = false;
+    //是否把一个avPacket中的frame读取完毕
+    bool readFrameFinished = false;
+
+    //有关剪切功能
+    bool isCut = false;
+    int endTime = 0;
+    bool isReturnPcm = false;
 public:
     HAudio( HPlayStatus *status,int sample_rate,HCallJava *callJava);
     ~HAudio();

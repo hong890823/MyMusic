@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -30,6 +31,8 @@ import com.hong.myplayer.util.HTimeUtil;
 import java.io.File;
 import java.lang.ref.WeakReference;
 
+//https://github.com/wanliyang1990
+//https://blog.csdn.net/ywl5320
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, HonPreparedListener, HonLoadListener, HonPauseResumeListener, HonTimeInfoListener, HonErrorListener, HonCompleteListener, HonRecordListener {
     private HPlayer player;
 
@@ -97,7 +100,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         player = new HPlayer();
         player.setSource("http://mpge.5nd.com/2015/2015-11-26/69708/1.mp3");
         String path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/myheart.mp3";
-        player.setSource(path);
+        String path1 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Someone Like You.ape";
+        String path2 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/煎熬.ape";
+        String path3 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/美丽的神话.flac";
+        player.setSource(path3);
 //        player.setSource("http://ngcdn004.cnr.cn/live/dszs/index.m3u8");
 
         findViewById(R.id.start_play).setOnClickListener(this);
@@ -179,6 +185,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 || internetPermission != PackageManager.PERMISSION_GRANTED ) {
             ActivityCompat.requestPermissions(activity,PERMISSIONS,REQUEST_EXTERNAL);
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     @Override
@@ -290,5 +301,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         msg.obj = seconds;
         showTimeHandler.sendMessage(msg);
     }
+
+
 
 }

@@ -17,6 +17,10 @@ HAudio::HAudio(HPlayStatus *status,int sample_rate,HCallJava *callJava) {
     soundTouch->setChannels(2);
     soundTouch->setPitch(pitch);//变调
     soundTouch->setTempo(speed);//变速
+
+    this->isCut = false;
+    this->endTime = 0;
+    this->isReturnPcm = false;
 }
 
 HAudio::~HAudio() {
@@ -56,26 +60,30 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
                 callJava->onCallLoad(CHILD_THREAD, false);
             }
         }
+        //因为一个avPacket中的avFrame可能有多个，当全部读取完毕之后，在拿新的avPacket放大解码器中
+        if(readFrameFinished){
+            avPacket = av_packet_alloc();
+            if(queue->getAvpacket(avPacket)!=0){
+                av_packet_free(&avPacket);//释放avPacket里面的内存
+                av_free(avPacket); //释放avPacket本身的内存
+                avPacket = NULL;
+                continue;
+            }
+            //把packet放到解码器中
+            ret = avcodec_send_packet(deCodecCtx, avPacket);
+            if(ret != 0){
+                av_packet_free(&avPacket);
+                av_free(avPacket);
+                avPacket = NULL;
+                continue;
+            }
+        }
 
-        avPacket = av_packet_alloc();
-        if(queue->getAvpacket(avPacket)!=0){
-            av_packet_free(&avPacket);//释放avPacket里面的内存
-            av_free(avPacket); //释放avPacket本身的内存
-            avPacket = NULL;
-            continue;
-        }
-        //把packet放到解码器中
-        ret = avcodec_send_packet(deCodecCtx, avPacket);
-        if(ret != 0){
-            av_packet_free(&avPacket);
-            av_free(avPacket);
-            avPacket = NULL;
-            continue;
-        }
         avFrame = av_frame_alloc();
-        //从解码器中接收packet解压缩到avFrame
+        //从解码器中接收packet解压缩到avFrame，一个avPacket中可能有多个avFrame
         ret = avcodec_receive_frame(deCodecCtx, avFrame);
         if(ret==0){//成功
+            readFrameFinished = false;
             //解决声道数和声道布局的异常情况
             if(avFrame->channels > 0&& avFrame->channel_layout == 0){
                 avFrame->channel_layout = static_cast<uint64_t>(av_get_default_channel_layout(avFrame->channels));
@@ -97,6 +105,7 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
                     NULL, NULL
             );
             if(!swr_ctx || swr_init(swr_ctx) <0){
+                readFrameFinished = true;
                 av_packet_free(&avPacket);
                 av_free(avPacket);
                 avPacket = NULL;
@@ -138,6 +147,7 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
             swr_ctx = NULL;
             break;
         }else{
+            readFrameFinished = true;
             av_packet_free(&avPacket);
             av_free(avPacket);
             avPacket = NULL;
@@ -206,6 +216,19 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
 //            LOGD("分贝值是%i",db);
 
             (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);
+
+            //如果需要裁剪音频的话
+            //更独立的裁剪可以放到一个单独的线程去仿照这个逻辑做，速度会快一些。
+            if(audio->isCut){
+                if(audio->isReturnPcm){
+                    audio->callJava->onCallPcmInfo(audio->sampleBuffer, buffersize * 2 * 2);
+                }
+                if(audio->clock > audio->endTime){
+                    LOGE("裁剪退出...");
+                    audio->status->exit = true;
+                }
+            }
+
         }
     }
 }
@@ -472,7 +495,7 @@ int HAudio::getPCMDB(char *pcmcata, size_t pcmsize) {
     sum = sum / (pcmsize / 2);
     if(sum > 0)
     {
-        db = (int)20.0 *log10(sum);//计算振幅的方法
+        db = static_cast<int>((int)20.0 * log10(sum));//计算振幅的方法
     }
     return db;
 }

@@ -10,6 +10,7 @@ import com.hong.myplayer.listener.HonCompleteListener;
 import com.hong.myplayer.listener.HonErrorListener;
 import com.hong.myplayer.listener.HonLoadListener;
 import com.hong.myplayer.listener.HonPauseResumeListener;
+import com.hong.myplayer.listener.HonPcmInfoListener;
 import com.hong.myplayer.listener.HonPreparedListener;
 import com.hong.myplayer.listener.HonRecordListener;
 import com.hong.myplayer.listener.HonTimeInfoListener;
@@ -45,6 +46,8 @@ public class HPlayer {
     private HonErrorListener onErrorListener;
     private HonCompleteListener onCompleteListener;
     private HonRecordListener onRecordListener;
+    private HonPcmInfoListener onPcmInfoListener;
+
 
     public HPlayer(){
 
@@ -73,6 +76,9 @@ public class HPlayer {
     }
     public void setOnRecordListener(HonRecordListener onRecordListener) {
         this.onRecordListener = onRecordListener;
+    }
+    public void setOnPcmInfoListener(HonPcmInfoListener onPcmInfoListener) {
+        this.onPcmInfoListener = onPcmInfoListener;
     }
 
     public void prepare(){
@@ -184,6 +190,14 @@ public class HPlayer {
         LogUtil.logD("继续录音");
     }
 
+    public void cutAudioPlay(int startTime,int endTime,boolean isReturnPcm){
+        if(n_cut_audio_play(startTime,endTime,isReturnPcm)){
+            start();
+        }else{
+            onCallError(2001,"cut audio is wrong");
+        }
+    }
+
     //jni调用该方法表示解码器已经准备好了
     public void onCallPrepared(){
         if(onPreparedListener!=null)onPreparedListener.onPrepared();
@@ -214,6 +228,16 @@ public class HPlayer {
             prepare();
         }
     }
+    public void onCallPcmInfo(byte[] buffer,int size){
+        if(onPcmInfoListener!=null){
+            onPcmInfoListener.onPcmInfo(buffer,size);
+        }
+    }
+    public void onCallPcmRate(int sampleRate){
+        if(onPcmInfoListener != null){
+            onPcmInfoListener.onPcmRate(sampleRate, 16, 2);
+        }
+    }
 
     public native void n_prepare(String source);
     public native void n_start();
@@ -228,6 +252,7 @@ public class HPlayer {
     public native void n_speed(float speed);
     public native int n_sample_rate();
     public native void n_start_stop_record(boolean isStartRecord);
+    public native boolean n_cut_audio_play(int startTime,int endTime,boolean isReturnPcm);//调用流程是先设置了是否裁剪之后才播放
 
     //-------MediaCodec硬编码，边播边录-------
     private MediaCodec encoder;//里面有输入和输出两个队列

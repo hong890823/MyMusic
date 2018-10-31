@@ -73,6 +73,9 @@ void HFFmpeg::decodeFFmpegThread() {
                 audio->duration = static_cast<int>(ctx->duration / AV_TIME_BASE);//总时间
                 audio->time_base = ctx->streams[i]->time_base;//当前时间，需要累加
                 duration = audio->duration;
+
+                callJava->onCallPcmRate(audio->sample_rate);
+
                 //这里别用break跳出循环了...可能崩溃
             }
         }
@@ -131,7 +134,7 @@ void HFFmpeg::start() {
             av_usleep(1000*100);
             continue;
         }
-        if(audio->queue->getQueueSize()>100){//不要一次性全部读帧。这样控制一下既可以减少内存压力，又可以防止seek出错。
+        if(audio->queue->getQueueSize()>10){//不要一次性全部读帧。这样控制一下既可以减少内存压力，又可以防止seek不到。
             av_usleep(1000*100);
             continue;
         }
@@ -238,6 +241,10 @@ void HFFmpeg::release() {
     pthread_mutex_unlock(&init_mutex);
 }
 
+/*
+ * 针对类似ape这种一个avPacket中有多个avFrame的文件，
+ * seek的时间点可能没有绝对对应的avFrame，这个时候拿出的avFrame可能是前一个或者后一个
+ * */
 void HFFmpeg::seek(int64_t seconds) {
     if(duration<=0)return; //直播类的不需要seek功能
     if(seconds>0 && seconds<=duration){
@@ -249,6 +256,8 @@ void HFFmpeg::seek(int64_t seconds) {
 
             pthread_mutex_lock(&seek_mutex);
             ino64_t ts = static_cast<ino64_t>(seconds * AV_TIME_BASE);
+            //当seek的时候把缓存flush出去，保证seek的时候能马上播放当前进度的音乐
+            avcodec_flush_buffers(audio->deCodecCtx);
             avformat_seek_file(ctx,-1,INT64_MIN,ts,INT64_MAX,0);
             pthread_mutex_unlock(&seek_mutex);
 
@@ -280,4 +289,15 @@ int HFFmpeg::getSampleRate() {
 
 void HFFmpeg::startOrStopRecord(bool isStartRecord) {
     if(audio!=NULL)audio->startOrStopRecord(isStartRecord);
+}
+
+bool HFFmpeg::cutAudioPlay(int startTime, int endTime, bool isReturnPcm) {
+    if(startTime >= 0 && endTime <= duration && startTime < endTime) {
+        audio->isCut = true;
+        audio->endTime = endTime;
+        audio->isReturnPcm = isReturnPcm;
+        seek(startTime);
+        return true;
+    }
+    return false;
 }
