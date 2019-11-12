@@ -17,6 +17,12 @@ android {
                 abiFilters "armeabi-v7a","x86"
             }
         }
+
+//        sourceSets {
+//            main {
+//                jniLibs.srcDirs = ['src/main/jniLibs']
+//            }
+//        }
     }
 
     buildTypes {
