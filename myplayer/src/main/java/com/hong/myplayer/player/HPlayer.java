@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class HPlayer {
-    //    这里面的各个库的加载顺序不能变，否则很可能有的库加载不上，会报错
+    //    这里面的各个库的加载顺序最好不变，否则可能有的库加载不上，会报错
     static {
         System.loadLibrary("avutil-55");
         System.loadLibrary("swresample-2");
