@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -93,17 +94,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        initSourceFragment();
         verifyStoragePermissions(this);
         showTimeHandler = new ShowTimeHandler(this);
 
         player = new HPlayer();
         player.setSource("http://mpge.5nd.com/2015/2015-11-26/69708/1.mp3");
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/myheart.mp3";
-        String path1 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Someone Like You.ape";
-        String path2 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/煎熬.ape";
-        String path3 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/美丽的神话.flac";
-        player.setSource(path3);
+//        String path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/myheart.mp3";
+//        String path1 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Someone Like You.ape";
+//        String path2 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/煎熬.ape";
+//        String path3 = Environment.getExternalStorageDirectory().getAbsolutePath()+"/美丽的神话.flac";
+//        player.setSource(path3);
 //        player.setSource("http://ngcdn004.cnr.cn/live/dszs/index.m3u8");
 
         findViewById(R.id.start_play).setOnClickListener(this);
@@ -171,6 +172,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         player.setOnCompleteListener(this);
         player.setOnRecordListener(this);
 
+    }
+
+    private void initSourceFragment(){
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.add(R.id.file_list_content,new SourceFragment());
+        ft.commitAllowingStateLoss();
+    }
+
+    public void setDataSource(String source){
+        if(player!=null){
+            player.setSource(source);
+            player.prepare();
+        }
     }
 
     /**
