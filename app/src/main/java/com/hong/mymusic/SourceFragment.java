@@ -102,6 +102,7 @@ public class SourceFragment extends Fragment {
 
             String name = sourceListBean.getName();
             if(name.endsWith("mp3")
+            || name.endsWith("wav")
             || name.endsWith("ape")
             || name.endsWith("flac")
             || name.endsWith("m3u8"))

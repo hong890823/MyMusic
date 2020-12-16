@@ -48,8 +48,9 @@ public:
     double now_time;//当前frame时间
     double last_tiem; //上一次调用时间
 
-    // 引擎接口
+    //通过SLObjectItf接口类可以创建所需要的各种类型的接口
     SLObjectItf engineObject = NULL;
+    // 引擎接口
     SLEngineItf engineEngine = NULL;
 
     //混音器
@@ -60,6 +61,7 @@ public:
     //pcm播放器
     SLObjectItf pcmPlayerObject = NULL;
     SLPlayItf pcmPlayerPlay = NULL;
+    //声音控制器
     SLVolumeItf pcmPlayerVolume = NULL;
     SLMuteSoloItf  pcmPlayerMuteSolo = NULL;
 
@@ -71,7 +73,7 @@ public:
     float speed = 1.0f;
 
     SoundTouch *soundTouch = NULL;
-    SAMPLETYPE *sampleBuffer = NULL;//16位 8位转成16位才能用SoundTouch变速变调
+    SAMPLETYPE *sampleBuffer = NULL;// SoundTouch的音频数据存储
     int nb = 0;
     uint num = 0;
     uint8_t *outBuffer = NULL;//8位

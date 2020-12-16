@@ -80,7 +80,7 @@ void HFFmpeg::decodeFFmpegThread() {
             }
         }
     }
-    //获取编码器对应的解码器
+    //获取编码器对应的编解码器
     AVCodec *dec = avcodec_find_decoder(audio->codecPar->codec_id);
     if(!dec){
         LOGE("avcodec find decoder wrong");

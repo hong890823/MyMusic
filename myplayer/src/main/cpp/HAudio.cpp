@@ -109,7 +109,7 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
                 callJava->onCallLoad(CHILD_THREAD, false);
             }
         }
-        //因为一个avPacket中的avFrame可能有多个，当全部读取完毕之后，在拿新的avPacket放大解码器中
+        //当全部读取完毕之后，在拿新的avPacket放大解码器中
         if(readFrameFinished){
             avPacket = av_packet_alloc();
             if(queue->getAvpacket(avPacket)!=0){
@@ -129,7 +129,7 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
         }
 
         avFrame = av_frame_alloc();
-        //从解码器中接收packet解压缩到avFrame，一个avPacket中可能有多个avFrame
+        //从解码器中接收packet解压缩到avFrame
         ret = avcodec_receive_frame(deCodecCtx, avFrame);
         if(ret==0){//成功
             readFrameFinished = false;
@@ -141,7 +141,8 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
                 avFrame->channels = av_get_channel_layout_nb_channels(avFrame->channel_layout);
             }
 
-            //重采样初始化（不能改变采样率，要改变采样率需要FFmpegFilter才可以）
+            //重采样初始化（不能改变采样率，要改变采样率需要AVFilter才可以）
+            //那这里的重采样的意义是什么呢？一个是为了得到PCM数据，一个是为了统一采样位数以及声道布局
             SwrContext *swr_ctx;
             swr_ctx = swr_alloc_set_opts(
                     NULL,
@@ -165,10 +166,10 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
                 swr_ctx = NULL;
                 continue;
             }
-            //nb就是重采样后的采样率大小，实际数据存在了buffer中
+            //nb就是重采样后的单位时间的采样数据的大小（这个值基本上应该是小于1秒的采样率的值），实际数据存在了buffer中
             nb = swr_convert(
                     swr_ctx,
-                    &buffer,//buffer定成1秒需要的内存空间就足够，真实的重采样根本不到1秒
+                    &buffer,//转码后输出的PCM数据；buffer定成1秒需要的内存空间就足够，真实的重采样根本不到1秒
                     avFrame->nb_samples,//输出采样个数（这里和输入的一样）
                     (const uint8_t **) avFrame->data,//输入的数据
                     avFrame->nb_samples//输入的采样个数
@@ -210,6 +211,7 @@ int HAudio::resampleAudio(uint8_t **outBuffer) {
     return data_size;
 }
 
+//OpenSLES里面也有变速功能，但是它的变速在同时也改变了音调，无法分开所以不采用
 int HAudio::getSoundTouchData() {
     while(status!=NULL && !status->exit){
         outBuffer = NULL;
@@ -218,10 +220,11 @@ int HAudio::getSoundTouchData() {
             data_size = resampleAudio(&outBuffer);
             if(data_size>0){
                 for(int i = 0; i < data_size / 2 + 1; i++){
+                    //SoundTouch要求的数据格式是16bit integer，而我们的outBuffer是uint8的，需要转换
                     sampleBuffer[i] = (outBuffer[i * 2] | ((outBuffer[i * 2 + 1]) << 8));
                 }
                 soundTouch->putSamples(sampleBuffer, nb);
-                num = soundTouch->receiveSamples(sampleBuffer,data_size/4);
+                num = soundTouch->receiveSamples(sampleBuffer,data_size/(2*2));//data_size/(2*2)得到的值其实就是nb的值
             }else{
                 soundTouch->flush();
             }
@@ -248,8 +251,8 @@ int HAudio::getSoundTouchData() {
 void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
     HAudio *audio = static_cast<HAudio *>(context);
     if(audio != NULL){
-//        int buffersize = audio->resampleAudio();
-        int buffersize = audio->getSoundTouchData();
+        int buffersize = audio->resampleAudio(&audio-> outBuffer); //对应普通播放
+//        int buffersize = audio->getSoundTouchData(); //对应特效播放
         if(buffersize > 0){
             audio->clock += buffersize / ((double)(audio->sample_rate * 2 * 2));
             if(audio->clock - audio->last_tiem >= 1){//不需要频繁回调，这里面限定1秒回调1次
@@ -263,8 +266,8 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
 //            LOGD("分贝值是%i",db);
 
             //实际播放的方法
-//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize);
-            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);
+            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize); //对应普通播放
+//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);  //对应特效播放
 
             //如果需要裁剪音频的话
             //更独立的裁剪可以放到一个单独的线程去仿照这个逻辑做，速度会快一些。
@@ -283,6 +286,12 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
 }
 
 void HAudio::initOpenSLES() {
+    /*
+     *引擎接口，混音器接口，播放器接口等创建的三部曲
+     * create->realize->get
+     * */
+
+    //第一步，创建引擎
     SLresult result;
     result = slCreateEngine(&engineObject, 0, 0, 0, 0, 0);
     result = (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
@@ -291,6 +300,7 @@ void HAudio::initOpenSLES() {
     //第二步，创建混音器
     const SLInterfaceID mids[1] = {SL_IID_ENVIRONMENTALREVERB};
     const SLboolean mreq[1] = {SL_BOOLEAN_FALSE};
+    //param 1:mids数组的个数； mids：混音的方式吧
     result = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 1, mids, mreq);
     (void)result;
     result = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
@@ -301,13 +311,10 @@ void HAudio::initOpenSLES() {
                 outputMixEnvironmentalReverb, &reverbSettings);
         (void)result;
     }
-    SLDataLocator_OutputMix outputMix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
-    SLDataSink audioSnk = {&outputMix, 0};
 
-
-    // 第三步，配置PCM格式信息
+    // 第三步，创建播放器
+    // 配置PCM格式信息
     SLDataLocator_AndroidSimpleBufferQueue android_queue={SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,2};
-
     SLDataFormat_PCM pcm={
             SL_DATAFORMAT_PCM,//播放pcm格式的数据
             2,//2个声道（立体声）
@@ -318,6 +325,9 @@ void HAudio::initOpenSLES() {
             SL_BYTEORDER_LITTLEENDIAN//结束标志
     };
     SLDataSource slDataSource = {&android_queue, &pcm};
+
+    SLDataLocator_OutputMix outputMix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
+    SLDataSink audioSnk = {&outputMix, 0};
 
     //切记这里面一定要把相应的功能都加上
     const SLInterfaceID ids[4] = {SL_IID_BUFFERQUEUE,SL_IID_VOLUME,SL_IID_PLAYBACKRATE,SL_IID_MUTESOLO};
@@ -341,7 +351,6 @@ void HAudio::initOpenSLES() {
 //    获取播放状态接口
     (*pcmPlayerPlay)->SetPlayState(pcmPlayerPlay, SL_PLAYSTATE_PLAYING);
     pcmBufferCallBack(pcmBufferQueue, this);
-
 }
 
 int HAudio::getCurrentSampleRateForOpensles(int sample_rate) {

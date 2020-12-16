@@ -1,6 +1,3 @@
-//
-// Created by ywl on 2017-12-3.
-//
 
 #ifndef HPLAYER_BUFFERQUEUE_H
 #define HPLAYER_BUFFERQUEUE_H

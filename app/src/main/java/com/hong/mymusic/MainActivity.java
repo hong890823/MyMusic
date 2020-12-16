@@ -32,8 +32,6 @@ import com.hong.myplayer.util.HTimeUtil;
 import java.io.File;
 import java.lang.ref.WeakReference;
 
-//https://github.com/wanliyang1990
-//https://blog.csdn.net/ywl5320
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, HonPreparedListener, HonLoadListener, HonPauseResumeListener, HonTimeInfoListener, HonErrorListener, HonCompleteListener, HonRecordListener {
     private HPlayer player;
 
