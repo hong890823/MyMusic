@@ -251,8 +251,8 @@ int HAudio::getSoundTouchData() {
 void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
     HAudio *audio = static_cast<HAudio *>(context);
     if(audio != NULL){
-        int buffersize = audio->resampleAudio(&audio-> outBuffer); //对应普通播放
-//        int buffersize = audio->getSoundTouchData(); //对应特效播放
+//        int buffersize = audio->resampleAudio(&audio-> outBuffer); //对应普通播放
+        int buffersize = audio->getSoundTouchData(); //对应特效播放
         if(buffersize > 0){
             audio->clock += buffersize / ((double)(audio->sample_rate * 2 * 2));
             if(audio->clock - audio->last_tiem >= 1){//不需要频繁回调，这里面限定1秒回调1次
@@ -266,8 +266,8 @@ void pcmBufferCallBack(SLAndroidSimpleBufferQueueItf bf, void * context) {
 //            LOGD("分贝值是%i",db);
 
             //实际播放的方法
-            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize); //对应普通播放
-//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);  //对应特效播放
+//            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> buffer, buffersize); //对应普通播放
+            (* audio-> pcmBufferQueue)->Enqueue( audio->pcmBufferQueue, (char *) audio-> sampleBuffer, buffersize*2*2);  //对应特效播放
 
             //如果需要裁剪音频的话
             //更独立的裁剪可以放到一个单独的线程去仿照这个逻辑做，速度会快一些。
